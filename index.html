@@ -1,0 +1,2052 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>B站收藏夹标签统计</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --ink: #172033;
+      --muted: #65738a;
+      --line: #dfe6f1;
+      --blue: #1677ff;
+      --blue-soft: #eaf3ff;
+      --cyan: #06a6b7;
+      --green: #15803d;
+      --amber: #b45309;
+      --red: #d92d20;
+      --shadow: 0 12px 32px rgba(32, 55, 90, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        linear-gradient(rgba(22, 119, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(22, 119, 255, 0.035) 1px, transparent 1px),
+        var(--bg);
+      background-size: 28px 28px;
+      font-family:
+        "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui,
+        sans-serif;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .shell {
+      width: min(1440px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 20px;
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 3vw, 38px);
+      line-height: 1.15;
+    }
+
+    .hero p {
+      max-width: 700px;
+      margin: 9px 0 0;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .hero-tag {
+      flex: 0 0 auto;
+      padding: 9px 13px;
+      border: 1px solid #b9d9ff;
+      border-radius: 999px;
+      color: #0958bf;
+      background: #eff7ff;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(290px, 350px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .controls {
+      position: sticky;
+      top: 18px;
+      padding: 20px;
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 17px;
+    }
+
+    .panel-title h2,
+    .section-head h2 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #9aa8bd;
+      box-shadow: 0 0 0 4px rgba(154, 168, 189, 0.13);
+    }
+
+    .status-dot.running {
+      background: var(--blue);
+      box-shadow: 0 0 0 4px rgba(22, 119, 255, 0.14);
+      animation: pulse 1.25s ease-in-out infinite;
+    }
+
+    .status-dot.done {
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(21, 128, 61, 0.12);
+    }
+
+    .status-dot.error {
+      background: var(--red);
+      box-shadow: 0 0 0 4px rgba(217, 45, 32, 0.12);
+    }
+
+    @keyframes pulse {
+      50% {
+        transform: scale(0.7);
+        opacity: 0.55;
+      }
+    }
+
+    .field {
+      margin-bottom: 15px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 7px;
+      color: #354258;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .input-wrap {
+      display: flex;
+      align-items: center;
+      border: 1px solid #cfd9e8;
+      border-radius: 7px;
+      background: #fbfdff;
+    }
+
+    .input-wrap:focus-within {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.1);
+    }
+
+    .input-wrap input {
+      width: 100%;
+      min-width: 0;
+      padding: 10px 11px;
+      border: 0;
+      outline: 0;
+      color: var(--ink);
+      background: transparent;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .input-wrap select {
+      width: 100%;
+      padding: 10px 11px;
+      border: 0;
+      outline: 0;
+      color: var(--ink);
+      background: transparent;
+    }
+
+    .input-wrap span {
+      padding-right: 11px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 11px;
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 9px;
+      margin-top: 7px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease,
+        background 0.15s ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.52;
+    }
+
+    .primary {
+      padding: 11px 14px;
+      color: white;
+      background: var(--blue);
+      box-shadow: 0 6px 14px rgba(22, 119, 255, 0.25);
+      font-weight: 800;
+    }
+
+    .secondary {
+      padding: 10px 13px;
+      color: #23405f;
+      background: #eaf0f7;
+      font-weight: 700;
+    }
+
+    .stop {
+      color: #9b241c;
+      background: #fff0ee;
+    }
+
+    .note {
+      margin: 16px 0 0;
+      padding: 12px;
+      border-left: 3px solid #80b8f8;
+      color: #52627a;
+      background: #f5f9ff;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .cache-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: -3px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .cache-clear {
+      flex: 0 0 auto;
+      padding: 5px 7px;
+      color: #a02820;
+      background: #fff1ef;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .main {
+      display: grid;
+      gap: 18px;
+    }
+
+    .progress-card {
+      padding: 20px;
+    }
+
+    .folder-line {
+      min-height: 24px;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .folder-line strong {
+      color: var(--ink);
+    }
+
+    .progress-track {
+      height: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e8eef7;
+    }
+
+    .progress-bar {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--blue), var(--cyan));
+      transition: width 0.25s ease;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .metric {
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid #e5ebf4;
+      border-radius: 7px;
+      background: #fafcff;
+    }
+
+    .metric .value {
+      display: block;
+      color: var(--ink);
+      font-size: 21px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+    }
+
+    .metric-pair {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 3px 5px;
+    }
+
+    .metric-pair .metric-total {
+      color: var(--muted);
+      font-size: 0.78em;
+      font-weight: 800;
+    }
+
+    .metric .label {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.75fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .section {
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section-head p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .tag-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfdff;
+    }
+
+    .category-filter {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 9px;
+      border: 1px solid #d9e3f1;
+      color: #516178;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .category-filter.active {
+      border-color: #9fc7fa;
+      color: #0b5dbd;
+      background: var(--blue-soft);
+    }
+
+    .category-filter.included {
+      border-color: #8fd2aa;
+      color: #12653a;
+      background: #eaf9f0;
+    }
+
+    .category-filter.excluded {
+      border-color: #f0aaa4;
+      color: #a12820;
+      background: #fff0ee;
+      text-decoration: line-through;
+    }
+
+    .filter-symbol {
+      font-weight: 900;
+    }
+
+    .merge-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 14px;
+      border-bottom: 1px solid #f0d79a;
+      background: #fffaf0;
+      font-size: 12px;
+    }
+
+    .merge-bar input {
+      min-width: 180px;
+      flex: 1;
+      padding: 8px 9px;
+      border: 1px solid #d9c28a;
+      border-radius: 6px;
+      outline: 0;
+      background: #fff;
+    }
+
+    .merge-bar button {
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+
+    .merge-count {
+      color: #805b0a;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .merge-check {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      accent-color: #d49313;
+      cursor: pointer;
+    }
+
+    .category-filter b {
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .export-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      justify-content: flex-end;
+    }
+
+    .export-row button {
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+
+    .table-scroll {
+      max-height: 560px;
+      overflow: auto;
+    }
+
+    .tag-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 11px 14px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      background: #fbfdff;
+      font-size: 12px;
+    }
+
+    .pagination-actions {
+      display: flex;
+      gap: 7px;
+    }
+
+    .pagination-actions button {
+      padding: 6px 9px;
+      color: #30445f;
+      background: #edf2f8;
+      font-size: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th,
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #edf1f7;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      color: #5a6880;
+      background: #f8fbff;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    tbody tr:hover {
+      background: #fafdff;
+    }
+
+    .rank {
+      width: 54px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tag-name {
+      overflow: hidden;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .category-cell {
+      width: 230px;
+    }
+
+    .partition-cell {
+      width: 126px;
+    }
+
+    .chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .class-chip {
+      display: inline-block;
+      max-width: 100%;
+      overflow: hidden;
+      padding: 3px 6px;
+      border-radius: 4px;
+      color: #4b5c73;
+      background: #eef2f7;
+      font-size: 11px;
+      line-height: 1.25;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .class-chip[data-category="ip"] {
+      color: #8b3c13;
+      background: #fff0e5;
+    }
+
+    .class-chip[data-category="game"] {
+      color: #145b38;
+      background: #e8f8ef;
+    }
+
+    .class-chip[data-category="activity"] {
+      color: #8a5a00;
+      background: #fff5d7;
+    }
+
+    .class-chip[data-category="anime_film"] {
+      color: #823678;
+      background: #fbeef8;
+    }
+
+    .class-chip[data-category="tech_ai"] {
+      color: #125b72;
+      background: #e7f8fc;
+    }
+
+    .class-chip[data-category="music_dance"] {
+      color: #7b3f0a;
+      background: #fff1df;
+    }
+
+    .class-chip[data-category="knowledge"] {
+      color: #304a9a;
+      background: #edf1ff;
+    }
+
+    .class-chip[data-category="life_entertainment"] {
+      color: #686000;
+      background: #f8f7de;
+    }
+
+    .class-chip[data-category="emotion_people"] {
+      color: #94506a;
+      background: #fdeef3;
+    }
+
+    .partition-cell {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      color: #40516a;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .partition-main {
+      font-weight: 800;
+    }
+
+    .partition-more {
+      color: var(--muted);
+    }
+
+    .count {
+      width: 94px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .coverage {
+      width: 150px;
+    }
+
+    .coverage-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mini-track {
+      flex: 1;
+      height: 6px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e9eff7;
+    }
+
+    .mini-bar {
+      height: 100%;
+      border-radius: inherit;
+      background: var(--blue);
+    }
+
+    .coverage span {
+      width: 42px;
+      color: var(--muted);
+      font-size: 11px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .empty {
+      padding: 42px 20px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.7;
+    }
+
+    .scan-list {
+      max-height: 560px;
+      overflow: auto;
+    }
+
+    .scan-item {
+      padding: 12px 16px;
+      border-bottom: 1px solid #edf1f7;
+    }
+
+    .scan-item:last-child {
+      border-bottom: 0;
+    }
+
+    .scan-title {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .scan-index {
+      flex: 0 0 auto;
+      min-width: 28px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .scan-video-title {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+
+    .scan-copy {
+      min-width: 0;
+    }
+
+    .video-link {
+      display: inline-block;
+      margin-top: 3px;
+      color: #1677ff;
+      font-size: 11px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .video-link:hover {
+      text-decoration: underline;
+    }
+
+    .scan-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 8px;
+      padding-left: 36px;
+    }
+
+    .tag-chip {
+      max-width: 100%;
+      overflow: hidden;
+      padding: 3px 7px;
+      border-radius: 4px;
+      color: #23527f;
+      background: var(--blue-soft);
+      font-size: 11px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .source-chip {
+      padding: 3px 7px;
+      border-radius: 4px;
+      color: #7c4a03;
+      background: #fff3d7;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .failed {
+      color: var(--red);
+      font-size: 12px;
+    }
+
+    .no-tag {
+      color: var(--amber);
+      font-size: 12px;
+    }
+
+    .log {
+      height: 132px;
+      overflow: auto;
+      padding: 13px 16px;
+      color: #d9e6f7;
+      background: #101a29;
+      font: 12px/1.65 Consolas, "Courier New", monospace;
+    }
+
+    .log-line {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .log-time {
+      color: #7eb4ef;
+    }
+
+    @media (max-width: 1350px) {
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 1050px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        position: static;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .shell {
+        width: min(100% - 20px, 1440px);
+        padding-top: 18px;
+      }
+
+      .hero {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 11px;
+      }
+
+      .metrics {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .coverage {
+        display: none;
+      }
+
+      .table-scroll {
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Local Favorite Analyzer</p>
+        <h1>B站收藏夹标签统计</h1>
+        <p>抓取指定公开收藏夹的视频标签，并在本地完成去重计数。不会下载视频，也不会上传收藏数据。</p>
+      </div>
+      <div class="hero-tag">仅统计标签，不分析内容</div>
+    </header>
+
+    <div class="layout">
+      <aside class="panel controls">
+        <div class="panel-title">
+          <h2>扫描设置</h2>
+          <span id="statusDot" class="status-dot" aria-label="等待扫描"></span>
+        </div>
+
+        <div class="field">
+          <label for="mediaId">收藏夹 media_id</label>
+          <div class="input-wrap">
+            <input id="mediaId" value="307741200" inputmode="numeric">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="limit">本次新增数量</label>
+          <div class="input-wrap">
+            <input id="limit" type="number" min="1" max="5000" step="1" value="200">
+            <span>条</span>
+          </div>
+        </div>
+
+        <div class="settings-grid">
+          <div class="field">
+            <label for="concurrency">并发数</label>
+            <div class="input-wrap">
+              <input id="concurrency" type="number" min="1" max="6" value="3">
+            </div>
+          </div>
+          <div class="field">
+            <label for="interval">请求间隔</label>
+            <div class="input-wrap">
+              <input id="interval" type="number" min="150" max="3000" step="50" value="350">
+              <span>ms</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="cacheMode">本地记录</label>
+          <div class="input-wrap">
+            <select id="cacheMode">
+              <option value="resume">断点续扫，只抓未记录视频</option>
+              <option value="refresh">重新抓取并更新记录</option>
+              <option value="off">本次不读取也不保存</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="cache-status">
+          <span id="cacheStatus">正在读取本地记录...</span>
+          <button id="clearCacheBtn" class="cache-clear" type="button">清空本夹记录</button>
+        </div>
+
+        <div class="button-row">
+          <button id="startBtn" class="primary" type="button">开始统计</button>
+          <button id="stopBtn" class="secondary stop" type="button" disabled>停止</button>
+        </div>
+
+        <p class="note">续扫模式会先把本地记录计入统计，再从收藏夹顶部向后抓取下一批未记录视频；失败项不会写入，下一次会自动重试。</p>
+      </aside>
+
+      <section class="main">
+        <div class="panel progress-card">
+          <div id="folderLine" class="folder-line">等待开始扫描</div>
+          <div class="progress-track" aria-label="扫描进度">
+            <div id="progressBar" class="progress-bar"></div>
+          </div>
+          <div class="metrics">
+            <div class="metric">
+              <span id="metricCumulative" class="value">0</span>
+              <span class="label">累计视频</span>
+            </div>
+            <div class="metric">
+              <span class="value metric-pair">
+                <span id="metricProcessed">0</span>
+                <span class="metric-total">/ <span id="metricTotal">0</span></span>
+              </span>
+              <span class="label">已处理 / 总计</span>
+            </div>
+            <div class="metric">
+              <span id="metricSuccess" class="value">0</span>
+              <span class="label">取到标签</span>
+            </div>
+            <div class="metric">
+              <span id="metricEmpty" class="value">0</span>
+              <span class="label">无标签</span>
+            </div>
+            <div class="metric">
+              <span id="metricFailed" class="value">0</span>
+              <span class="label">获取失败</span>
+            </div>
+            <div class="metric">
+              <span id="metricUnique" class="value">0</span>
+              <span class="label">不同标签</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="content-grid">
+          <div class="panel section">
+            <div class="section-head">
+              <div>
+                <h2>标签统计</h2>
+                <p>按出现视频数降序排列，包含主要分区和语义分类</p>
+              </div>
+              <div class="export-row">
+                <button id="exportCsvBtn" class="secondary" type="button" disabled>CSV</button>
+                <button id="exportJsonBtn" class="secondary" type="button" disabled>JSON</button>
+                <button id="mergeToggleBtn" class="secondary" type="button" disabled>合并标签</button>
+                <button id="resetFilterBtn" class="secondary" type="button">重置筛选</button>
+              </div>
+            </div>
+            <div id="tagToolbar" class="tag-toolbar" hidden></div>
+            <div id="mergeBar" class="merge-bar" hidden>
+              <span id="mergeCount" class="merge-count">已选 0 个标签</span>
+              <input id="mergedTagName" placeholder="合并后的标签名">
+              <button id="applyMergeBtn" class="primary" type="button" disabled>确认合并</button>
+              <button id="cancelMergeBtn" class="secondary" type="button">取消</button>
+            </div>
+            <div id="tagTableWrap" class="table-scroll">
+              <div class="empty">扫描后在这里显示标签出现次数。</div>
+            </div>
+            <div id="tagPagination" class="tag-pagination" hidden></div>
+          </div>
+
+          <div class="panel section">
+            <div class="section-head">
+              <div>
+                <h2>实时记录</h2>
+                <p id="scanCounter">累计 0</p>
+              </div>
+            </div>
+            <div id="scanList" class="scan-list">
+              <div class="empty">等待视频结果。</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel section">
+          <div class="section-head">
+            <div>
+              <h2>运行日志</h2>
+              <p>接口状态与错误会显示在这里</p>
+            </div>
+          </div>
+          <div id="log" class="log">
+            <div class="log-line"><span class="log-time">--:--:--</span> 页面已就绪</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="/tag-taxonomy.js"></script>
+  <script>
+    const elements = {
+      mediaId: document.querySelector("#mediaId"),
+      limit: document.querySelector("#limit"),
+      concurrency: document.querySelector("#concurrency"),
+      interval: document.querySelector("#interval"),
+      cacheMode: document.querySelector("#cacheMode"),
+      cacheStatus: document.querySelector("#cacheStatus"),
+      clearCacheBtn: document.querySelector("#clearCacheBtn"),
+      startBtn: document.querySelector("#startBtn"),
+      stopBtn: document.querySelector("#stopBtn"),
+      exportCsvBtn: document.querySelector("#exportCsvBtn"),
+      exportJsonBtn: document.querySelector("#exportJsonBtn"),
+      mergeToggleBtn: document.querySelector("#mergeToggleBtn"),
+      resetFilterBtn: document.querySelector("#resetFilterBtn"),
+      mergeBar: document.querySelector("#mergeBar"),
+      mergeCount: document.querySelector("#mergeCount"),
+      mergedTagName: document.querySelector("#mergedTagName"),
+      applyMergeBtn: document.querySelector("#applyMergeBtn"),
+      cancelMergeBtn: document.querySelector("#cancelMergeBtn"),
+      statusDot: document.querySelector("#statusDot"),
+      folderLine: document.querySelector("#folderLine"),
+      progressBar: document.querySelector("#progressBar"),
+      metricProcessed: document.querySelector("#metricProcessed"),
+      metricTotal: document.querySelector("#metricTotal"),
+      metricCumulative: document.querySelector("#metricCumulative"),
+      metricSuccess: document.querySelector("#metricSuccess"),
+      metricEmpty: document.querySelector("#metricEmpty"),
+      metricFailed: document.querySelector("#metricFailed"),
+      metricUnique: document.querySelector("#metricUnique"),
+      tagToolbar: document.querySelector("#tagToolbar"),
+      tagTableWrap: document.querySelector("#tagTableWrap"),
+      tagPagination: document.querySelector("#tagPagination"),
+      scanList: document.querySelector("#scanList"),
+      scanCounter: document.querySelector("#scanCounter"),
+      log: document.querySelector("#log")
+    };
+
+    const state = {
+      controller: null,
+      running: false,
+      total: 0,
+      processed: 0,
+      success: 0,
+      empty: 0,
+      failed: 0,
+      tagCounts: new Map(),
+      tagPartitions: new Map(),
+      tagCategories: new Map(),
+      includedCategories: new Set(),
+      excludedCategories: new Set(),
+      page: 1,
+      pageSize: 100,
+      mergeMode: false,
+      selectedTags: new Set(),
+      tagAliases: {},
+      videoRows: [],
+      scanRows: [],
+      folder: null,
+      startedAt: 0,
+      renderTimer: null
+    };
+
+    const TAG_CATEGORIES = Array.isArray(window.TAG_TAXONOMY?.categories)
+      ? window.TAG_TAXONOMY.categories
+      : [];
+    const CATEGORY_META = new Map(
+      TAG_CATEGORIES.map((category) => [category.key, category])
+    );
+    const FALLBACK_CATEGORY = { key: "other", label: "其他" };
+
+    function formatNumber(value) {
+      return new Intl.NumberFormat("zh-CN").format(value);
+    }
+
+    function nowTime() {
+      return new Date().toLocaleTimeString("zh-CN", { hour12: false });
+    }
+
+    function addLog(message, level = "info") {
+      const line = document.createElement("div");
+      line.className = "log-line";
+      if (level === "error") line.style.color = "#ff9f98";
+      if (level === "success") line.style.color = "#82e6a5";
+      line.innerHTML =
+        `<span class="log-time">${nowTime()}</span> ` +
+        `${escapeHtml(message)}`;
+      elements.log.appendChild(line);
+      elements.log.scrollTop = elements.log.scrollHeight;
+    }
+
+    async function refreshCacheStatus() {
+      const mediaId = elements.mediaId.value.trim();
+      if (!/^\d+$/.test(mediaId)) {
+        elements.cacheStatus.textContent = "收藏夹 ID 无效";
+        return;
+      }
+
+      elements.cacheStatus.textContent = "正在读取本地记录...";
+      try {
+        const response = await fetch(
+          `/api/cache/status?mediaId=${encodeURIComponent(mediaId)}`
+        );
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "读取失败");
+        const latest = payload.latestScannedAt
+          ? new Date(payload.latestScannedAt).toLocaleString("zh-CN", {
+              hour12: false
+            })
+          : "尚无记录";
+        elements.cacheStatus.textContent =
+          `已记录 ${formatNumber(payload.count)} 条 · 最近 ${latest}`;
+        elements.clearCacheBtn.disabled = payload.count === 0 || state.running;
+      } catch (error) {
+        elements.cacheStatus.textContent = `本地记录读取失败：${error.message}`;
+        elements.clearCacheBtn.disabled = true;
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function resetState() {
+      state.total = 0;
+      state.processed = 0;
+      state.success = 0;
+      state.empty = 0;
+      state.failed = 0;
+      state.tagCounts = new Map();
+      state.tagPartitions = new Map();
+      state.tagCategories = new Map();
+      state.page = 1;
+      state.selectedTags.clear();
+      setMergeMode(false);
+      if (state.renderTimer) {
+        clearTimeout(state.renderTimer);
+        state.renderTimer = null;
+      }
+      state.videoRows = [];
+      state.scanRows = [];
+      state.folder = null;
+      state.startedAt = performance.now();
+      elements.progressBar.style.width = "0%";
+      elements.folderLine.textContent = "正在连接本地服务";
+      elements.metricProcessed.textContent = "0";
+      elements.metricTotal.textContent = "0";
+      elements.metricCumulative.textContent = "0";
+      elements.metricSuccess.textContent = "0";
+      elements.metricEmpty.textContent = "0";
+      elements.metricFailed.textContent = "0";
+      elements.metricUnique.textContent = "0";
+      elements.scanCounter.textContent = "累计 0";
+      elements.tagToolbar.hidden = true;
+      elements.tagToolbar.innerHTML = "";
+      elements.tagTableWrap.innerHTML =
+        '<div class="empty">扫描后在这里显示标签出现次数。</div>';
+      elements.scanList.innerHTML =
+        '<div class="empty">等待视频结果。</div>';
+      elements.exportCsvBtn.disabled = true;
+      elements.exportJsonBtn.disabled = true;
+    }
+
+    function setRunning(running) {
+      state.running = running;
+      elements.startBtn.disabled = running;
+      elements.stopBtn.disabled = !running;
+      elements.mediaId.disabled = running;
+      elements.limit.disabled = running;
+      elements.concurrency.disabled = running;
+      elements.interval.disabled = running;
+      elements.cacheMode.disabled = running;
+      elements.clearCacheBtn.disabled = running;
+      elements.mergeToggleBtn.disabled = running || state.tagCounts.size === 0;
+      if (running) {
+        elements.statusDot.className = "status-dot running";
+      } else if (
+        !elements.statusDot.classList.contains("done") &&
+        !elements.statusDot.classList.contains("error")
+      ) {
+        elements.statusDot.className = "status-dot";
+      }
+    }
+
+    function updateMetrics() {
+      elements.metricProcessed.textContent = formatNumber(state.processed);
+      elements.metricTotal.textContent = formatNumber(state.total);
+      elements.metricCumulative.textContent = formatNumber(state.total);
+      elements.metricSuccess.textContent = formatNumber(state.success);
+      elements.metricEmpty.textContent = formatNumber(state.empty);
+      elements.metricFailed.textContent = formatNumber(state.failed);
+      elements.metricUnique.textContent = formatNumber(state.tagCounts.size);
+      elements.scanCounter.textContent =
+        `累计 ${formatNumber(state.total)}`;
+      const percent = state.total
+        ? Math.min(100, (state.processed / state.total) * 100)
+        : 0;
+      elements.progressBar.style.width = `${percent.toFixed(2)}%`;
+    }
+
+    function normalizeCategoryText(value) {
+      return String(value || "")
+        .toLowerCase()
+        .replace(/\s+/g, "");
+    }
+
+    function classifyTag(tag, tagMeta) {
+      const text = normalizeCategoryText(tag);
+      const keys = [];
+
+      for (const category of TAG_CATEGORIES) {
+        const exactMatch = (category.exact || []).some((keyword) => {
+          const normalized = normalizeCategoryText(keyword);
+          return text === normalized ||
+            (normalized.length >= 2 && text.startsWith(normalized));
+        });
+        const keywordMatch = (category.keywords || []).some((keyword) =>
+          text.includes(normalizeCategoryText(keyword))
+        );
+        if (exactMatch || keywordMatch) keys.push(category.key);
+      }
+
+      const officialType = normalizeCategoryText(tagMeta?.type);
+      if (
+        officialType === "topic" ||
+        officialType === "1" ||
+        officialType.includes("activity")
+      ) {
+        keys.push("activity");
+      }
+
+      const uniqueKeys = [...new Set(keys)];
+      return uniqueKeys.length ? uniqueKeys : [FALLBACK_CATEGORY.key];
+    }
+
+    function getCategoryMeta(key) {
+      return CATEGORY_META.get(key) || FALLBACK_CATEGORY;
+    }
+
+    function getTagCategoryKeys(tag) {
+      return [...(state.tagCategories.get(tag) || new Set([FALLBACK_CATEGORY.key]))];
+    }
+
+    function getTagPartitions(tag) {
+      return [...(state.tagPartitions.get(tag) || new Map()).entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "zh-CN"));
+    }
+
+    function getCanonicalTag(tag) {
+      let current = String(tag || "").trim();
+      const visited = new Set();
+      while (state.tagAliases[current] && !visited.has(current)) {
+        visited.add(current);
+        current = state.tagAliases[current];
+      }
+      return current;
+    }
+
+    function getFilterStorageKey() {
+      return `bili-tag-filters:${elements.mediaId.value.trim()}`;
+    }
+
+    function saveFilterState() {
+      try {
+        localStorage.setItem(
+          getFilterStorageKey(),
+          JSON.stringify({
+            included: [...state.includedCategories],
+            excluded: [...state.excludedCategories]
+          })
+        );
+      } catch {
+        // Filter persistence is optional.
+      }
+    }
+
+    function restoreFilterState() {
+      try {
+        const raw = localStorage.getItem(getFilterStorageKey());
+        const saved = raw ? JSON.parse(raw) : null;
+        state.includedCategories = new Set(saved?.included || []);
+        state.excludedCategories = new Set(saved?.excluded || []);
+      } catch {
+        state.includedCategories = new Set();
+        state.excludedCategories = new Set();
+      }
+      state.page = 1;
+    }
+
+    function setMergeMode(enabled) {
+      state.mergeMode = enabled;
+      state.selectedTags.clear();
+      elements.mergeBar.hidden = !enabled;
+      elements.mergeToggleBtn.classList.toggle("stop", enabled);
+      elements.mergeToggleBtn.textContent = enabled ? "退出合并" : "合并标签";
+      elements.mergedTagName.value = "";
+      elements.mergeCount.textContent = "已选 0 个标签";
+      elements.applyMergeBtn.disabled = true;
+    }
+
+    function scheduleDashboardRender() {
+      if (state.renderTimer) return;
+      state.renderTimer = setTimeout(() => {
+        state.renderTimer = null;
+        renderTags();
+      }, 180);
+    }
+
+    function buildTagRows() {
+      return [...state.tagCounts.entries()]
+        .map(([tag, count]) => ({
+          rank: 0,
+          tag,
+          count,
+          categories: getTagCategoryKeys(tag),
+          partitions: getTagPartitions(tag),
+          coverage: (count / (state.success || 1)) * 100
+        }))
+        .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "zh-CN"))
+        .map((row, index) => ({ ...row, rank: index + 1 }));
+    }
+
+    function renderTagToolbar(rows) {
+      const counts = new Map();
+      for (const row of rows) {
+        for (const key of row.categories) {
+          counts.set(key, (counts.get(key) || 0) + 1);
+        }
+      }
+
+      const filters = [
+        { key: "all", label: "全部", count: rows.length },
+        ...TAG_CATEGORIES
+          .filter((category) => counts.has(category.key))
+          .map((category) => ({
+            key: category.key,
+            label: category.label,
+            count: counts.get(category.key)
+          })),
+        ...(counts.has("other")
+          ? [{ key: "other", label: "其他", count: counts.get("other") }]
+          : [])
+      ];
+
+      elements.tagToolbar.innerHTML = filters.map((filter) => {
+        if (filter.key === "all") {
+          const active =
+            state.includedCategories.size === 0 &&
+            state.excludedCategories.size === 0;
+          return `
+            <button
+              class="category-filter ${active ? "active" : ""}"
+              type="button"
+              data-category="all"
+              title="清除全部包含和排除条件"
+            >
+              ${escapeHtml(filter.label)} <b>${filter.count}</b>
+            </button>
+          `;
+        }
+
+        const isIncluded = state.includedCategories.has(filter.key);
+        const isExcluded = state.excludedCategories.has(filter.key);
+        const stateClass = isIncluded
+          ? "included"
+          : isExcluded
+            ? "excluded"
+            : "";
+        const symbol = isIncluded ? "+" : isExcluded ? "-" : "";
+        return `
+          <button
+            class="category-filter ${stateClass}"
+            type="button"
+            data-category="${filter.key}"
+            title="点击切换：包含、排除、清除"
+          >
+            ${symbol ? `<span class="filter-symbol">${symbol}</span>` : ""}
+            ${escapeHtml(filter.label)} <b>${filter.count}</b>
+          </button>
+        `;
+      }).join("");
+      elements.tagToolbar.hidden = false;
+    }
+
+    function renderTags() {
+      const allRows = buildTagRows();
+      elements.mergeToggleBtn.disabled = state.running || allRows.length === 0;
+
+      if (allRows.length === 0) {
+        elements.tagToolbar.hidden = true;
+        elements.tagToolbar.innerHTML = "";
+        elements.tagPagination.hidden = true;
+        elements.tagTableWrap.innerHTML =
+          '<div class="empty">暂时没有可用标签。</div>';
+        return;
+      }
+
+      renderTagToolbar(allRows);
+      let rows = allRows;
+      if (state.includedCategories.size) {
+        rows = rows.filter((row) =>
+          row.categories.some((key) => state.includedCategories.has(key))
+        );
+      }
+      if (state.excludedCategories.size) {
+        rows = rows.filter((row) =>
+          !row.categories.some((key) => state.excludedCategories.has(key))
+        );
+      }
+
+      const totalPages = Math.max(1, Math.ceil(rows.length / state.pageSize));
+      state.page = Math.min(Math.max(1, state.page), totalPages);
+      const pageRows = rows.slice(
+        (state.page - 1) * state.pageSize,
+        state.page * state.pageSize
+      );
+
+      const body = pageRows.map((row) => {
+        const categoryChips = row.categories.map((key) => {
+          const category = getCategoryMeta(key);
+          return `<span class="class-chip" data-category="${key}">${escapeHtml(category.label)}</span>`;
+        }).join("");
+        const partitionChips = row.partitions.length
+          ? row.partitions.slice(0, 2).map(([name, count], partitionIndex) => {
+              const percent = row.count ? (count / row.count) * 100 : 0;
+              return `
+                <span class="${partitionIndex === 0 ? "partition-main" : "partition-more"}">
+                  ${escapeHtml(name)} ${percent.toFixed(0)}%
+                </span>
+              `;
+            }).join("")
+          : "<span class=\"partition-more\">未知分区</span>";
+        const mergeCell = state.mergeMode
+          ? `
+            <input
+              class="merge-check"
+              type="checkbox"
+              data-merge-tag="${escapeHtml(row.tag)}"
+              ${state.selectedTags.has(row.tag) ? "checked" : ""}
+              aria-label="选择标签 ${escapeHtml(row.tag)}"
+            >
+          `
+          : "";
+        return `
+          <tr>
+            <td class="rank">${row.rank}</td>
+            <td class="tag-name" title="${escapeHtml(row.tag)}">
+              <div class="chip-list">
+                ${mergeCell}
+                <span>${escapeHtml(row.tag)}</span>
+              </div>
+            </td>
+            <td>
+              <div class="category-cell">
+                <div class="chip-list">${categoryChips}</div>
+              </div>
+            </td>
+            <td>
+              <div class="partition-cell">${partitionChips}</div>
+            </td>
+            <td class="count">${row.count}</td>
+            <td class="coverage">
+              <div class="coverage-line">
+                <div class="mini-track">
+                  <div class="mini-bar" style="width:${Math.min(100, row.coverage)}%"></div>
+                </div>
+                <span>${row.coverage.toFixed(1)}%</span>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      elements.tagTableWrap.innerHTML = rows.length
+        ? `
+          <table>
+            <colgroup>
+              <col style="width:54px">
+              <col>
+              <col style="width:230px">
+              <col style="width:126px">
+              <col style="width:80px">
+              <col style="width:136px">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>排名</th>
+                <th>标签</th>
+                <th>分类</th>
+                <th>主要分区</th>
+                <th>视频数</th>
+                <th>覆盖率</th>
+              </tr>
+            </thead>
+            <tbody>${body}</tbody>
+          </table>
+        `
+        : '<div class="empty">当前分类下没有标签。</div>';
+
+      elements.tagPagination.hidden = false;
+      elements.tagPagination.innerHTML = `
+        <span>第 ${state.page} / ${totalPages} 页 · 共 ${rows.length} 个标签</span>
+        <div class="pagination-actions">
+          <button type="button" data-page="${state.page - 1}" ${state.page <= 1 ? "disabled" : ""}>上一页</button>
+          <button type="button" data-page="${state.page + 1}" ${state.page >= totalPages ? "disabled" : ""}>下一页</button>
+        </div>
+      `;
+    }
+
+    function appendScanRow(row) {
+      state.scanRows.push(row);
+      state.scanRows.sort((a, b) => b.index - a.index);
+      state.scanRows = state.scanRows.slice(0, 120);
+      if (elements.scanList.querySelector(".empty")) {
+        elements.scanList.innerHTML = "";
+      }
+
+      const item = document.createElement("div");
+      item.className = "scan-item";
+      item.dataset.index = String(row.index);
+      const tags = row.tags || [];
+      const sourceLabel = row.cached
+        ? "本地记录"
+        : row.source === "api"
+          ? "API备用"
+          : `${row.partition?.mainName || "视频页"}`;
+      const source = `<span class="source-chip">${escapeHtml(sourceLabel)}</span>`;
+      const detail = row.error
+        ? `<div class="failed">失败：${escapeHtml(row.error)}</div>`
+        : tags.length
+          ? `<div class="scan-tags">${
+              tags.map((tag) =>
+                `<span class="tag-chip" title="${escapeHtml(tag)}">${escapeHtml(tag)}</span>`
+              ).join("") + source
+            }</div>`
+          : `<div class="scan-tags"><span class="no-tag">无标签</span>${source}</div>`;
+      item.innerHTML = `
+        <div class="scan-title">
+          <span class="scan-index">累计 #${row.index}</span>
+          <div class="scan-copy">
+            <div class="scan-video-title" title="${escapeHtml(row.video.title)}">${escapeHtml(row.video.title)}</div>
+            <a
+              class="video-link"
+              href="https://www.bilibili.com/video/${encodeURIComponent(row.video.bvid)}/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >${escapeHtml(row.video.bvid)}</a>
+          </div>
+        </div>
+        ${detail}
+      `;
+      const before = [...elements.scanList.children].find(
+        (child) => Number(child.dataset.index) < row.index
+      );
+      if (before) {
+        elements.scanList.insertBefore(item, before);
+      } else {
+        elements.scanList.appendChild(item);
+      }
+
+      while (elements.scanList.children.length > 120) {
+        elements.scanList.lastElementChild.remove();
+      }
+    }
+
+    function addVideoToTagStats(row) {
+      const rawTags = row.rawTags || row.tags || [];
+      const canonicalTags = [...new Set(rawTags.map(getCanonicalTag).filter(Boolean))];
+      const partition = row.partition?.mainName || "未知分区";
+      const tagMetaByName = new Map(
+        (row.tagMeta || []).map((item) => [item.name, item])
+      );
+
+      for (const tag of canonicalTags) {
+        state.tagCounts.set(tag, (state.tagCounts.get(tag) || 0) + 1);
+        if (!state.tagPartitions.has(tag)) {
+          state.tagPartitions.set(tag, new Map());
+        }
+        const partitionMap = state.tagPartitions.get(tag);
+        partitionMap.set(partition, (partitionMap.get(partition) || 0) + 1);
+
+        const categories = state.tagCategories.get(tag) || new Set();
+        const matchingMeta = row.tagMeta?.find(
+          (item) => getCanonicalTag(item.name) === tag
+        );
+        for (const key of classifyTag(tag, matchingMeta || tagMetaByName.get(tag))) {
+          categories.add(key);
+        }
+        state.tagCategories.set(tag, categories);
+      }
+
+      row.tags = canonicalTags;
+      return canonicalTags;
+    }
+
+    function rebuildTagStats() {
+      state.tagCounts = new Map();
+      state.tagPartitions = new Map();
+      state.tagCategories = new Map();
+      for (const row of state.videoRows) {
+        addVideoToTagStats(row);
+      }
+      updateMetrics();
+      renderTags();
+    }
+
+    function consumeVideo(row) {
+      state.processed += 1;
+      const rawUniqueTags = [
+        ...new Set((row.tags || []).map((tag) => tag.trim()).filter(Boolean))
+      ];
+      if (rawUniqueTags.length) {
+        state.success += 1;
+      } else {
+        state.empty += 1;
+      }
+
+      const storedRow = {
+        ...row.video,
+        rawTags: rawUniqueTags,
+        tags: rawUniqueTags.map(getCanonicalTag),
+        tagMeta: row.tagMeta || [],
+        partition: row.partition || null
+      };
+      state.videoRows.push(storedRow);
+      const canonicalTags = addVideoToTagStats(storedRow);
+      appendScanRow({ ...row, tags: canonicalTags });
+      updateMetrics();
+      scheduleDashboardRender();
+    }
+
+    function consumeError(row) {
+      state.processed += 1;
+      state.failed += 1;
+      state.videoRows.push({
+        ...row.video,
+        tags: [],
+        error: row.error
+      });
+      appendScanRow(row);
+      updateMetrics();
+    }
+
+    function parseNdjsonLine(line) {
+      if (!line.trim()) return;
+      let payload;
+      try {
+        payload = JSON.parse(line);
+      } catch {
+        addLog(`无法解析进度数据：${line.slice(0, 120)}`, "error");
+        return;
+      }
+
+      if (payload.type === "status") {
+        elements.folderLine.textContent = payload.message;
+        addLog(payload.message);
+        return;
+      }
+
+      if (payload.type === "meta") {
+        state.folder = payload.folder;
+        state.total = payload.total;
+        elements.folderLine.innerHTML =
+          `<strong>${escapeHtml(payload.folder.title)}</strong> · ` +
+          `${escapeHtml(payload.folder.owner)} · 收藏夹共 ` +
+          `${formatNumber(payload.folder.mediaCount)} 条，本次累计 ` +
+          `${formatNumber(payload.total)} 个视频，本地命中 ` +
+          `${formatNumber(payload.cached || 0)} 个，新增 ` +
+          `${formatNumber(payload.newCount || 0)} 个`;
+        addLog(
+          `已读取收藏夹：本地记录 ${payload.cached || 0} 个，` +
+          `本次新增 ${payload.newCount || 0} 个`,
+          "success"
+        );
+        updateMetrics();
+        return;
+      }
+
+      if (payload.type === "video") {
+        consumeVideo(payload);
+        return;
+      }
+
+      if (payload.type === "videoError") {
+        consumeError(payload);
+        addLog(`#${payload.index} ${payload.video.bvid} 获取失败：${payload.error}`, "error");
+        return;
+      }
+
+      if (payload.type === "done") {
+        if (state.renderTimer) {
+          clearTimeout(state.renderTimer);
+          state.renderTimer = null;
+        }
+        renderTags();
+        const seconds = Math.max(0.1, (performance.now() - state.startedAt) / 1000);
+        addLog(
+          `扫描完成：${payload.success} 个有标签，${payload.empty} 个无标签，` +
+          `${payload.failed} 个失败，${payload.cached || 0} 个来自本地记录，` +
+          `${payload.pageCount || 0} 个使用视频页，` +
+          `${payload.apiFallbacks || 0} 个使用 API 备用，` +
+          `耗时 ${seconds.toFixed(1)} 秒`,
+          "success"
+        );
+        elements.folderLine.textContent += ` · 扫描完成`;
+        elements.statusDot.className = "status-dot done";
+        elements.exportCsvBtn.disabled = state.videoRows.length === 0;
+        elements.exportJsonBtn.disabled = state.videoRows.length === 0;
+        return;
+      }
+
+      if (payload.type === "fatal") {
+        throw new Error(payload.error);
+      }
+    }
+
+    async function startScan() {
+      const mediaId = elements.mediaId.value.trim();
+      const limit = Number(elements.limit.value);
+      const concurrency = Number(elements.concurrency.value);
+      const interval = Number(elements.interval.value);
+
+      if (!/^\d+$/.test(mediaId) || limit < 1) {
+        addLog("请填写有效的收藏夹 ID 和扫描数量", "error");
+        return;
+      }
+
+      resetState();
+      setRunning(true);
+      addLog(
+        `开始扫描收藏夹 ${mediaId}，本次新增上限 ${limit}，` +
+        `模式 ${elements.cacheMode.options[elements.cacheMode.selectedIndex].text}`
+      );
+      state.controller = new AbortController();
+
+      const params = new URLSearchParams({
+        mediaId,
+        limit: String(limit),
+        concurrency: String(concurrency),
+        interval: String(interval),
+        cacheMode: elements.cacheMode.value
+      });
+
+      try {
+        const response = await fetch(`/api/scan?${params}`, {
+          signal: state.controller.signal
+        });
+        if (!response.ok || !response.body) {
+          throw new Error(`本地服务响应异常：HTTP ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop();
+          for (const line of lines) parseNdjsonLine(line);
+        }
+        if (buffer.trim()) parseNdjsonLine(buffer);
+
+        if (state.processed < state.total) {
+          addLog("扫描流已结束，但未收到全部结果", "error");
+          elements.statusDot.className = "status-dot error";
+        }
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          addLog(`扫描异常：${error.message}`, "error");
+          elements.statusDot.className = "status-dot error";
+        } else {
+          addLog("扫描已停止");
+          elements.statusDot.className = "status-dot";
+        }
+      } finally {
+        setRunning(false);
+        state.controller = null;
+        elements.exportCsvBtn.disabled = state.videoRows.length === 0;
+        elements.exportJsonBtn.disabled = state.videoRows.length === 0;
+        refreshCacheStatus();
+      }
+    }
+
+    async function clearCache() {
+      const mediaId = elements.mediaId.value.trim();
+      if (!/^\d+$/.test(mediaId)) {
+        addLog("请先填写有效的收藏夹 ID", "error");
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `将删除本地文件 data/bilibili-tags.sqlite 中 ` +
+        `media_id=${mediaId} 的全部扫描记录。\n` +
+        "不会删除或修改 B 站收藏夹。确定继续吗？"
+      );
+      if (!confirmed) return;
+
+      try {
+        const response = await fetch(
+          `/api/cache?mediaId=${encodeURIComponent(mediaId)}`,
+          { method: "DELETE" }
+        );
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "清空失败");
+        addLog(`已清空本收藏夹的 ${payload.deleted} 条本地记录`, "success");
+        await refreshCacheStatus();
+      } catch (error) {
+        addLog(`清空本地记录失败：${error.message}`, "error");
+      }
+    }
+
+    async function loadTagOverrides() {
+      try {
+        const response = await fetch("/api/tag-overrides");
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "读取失败");
+        state.tagAliases = payload.aliases || {};
+        if (state.videoRows.length) rebuildTagStats();
+      } catch (error) {
+        addLog(`标签合并文件读取失败：${error.message}`, "error");
+      }
+    }
+
+    async function applyTagMerge() {
+      if (state.selectedTags.size === 0) return;
+      const selected = [...state.selectedTags];
+      const targetName =
+        elements.mergedTagName.value.trim() || selected[0];
+      const aliases = { ...state.tagAliases };
+
+      for (const source of selected) {
+        if (source !== targetName) aliases[source] = targetName;
+      }
+      if (aliases[targetName] === targetName) delete aliases[targetName];
+
+      try {
+        const response = await fetch("/api/tag-overrides", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ version: 1, aliases })
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "保存失败");
+        state.tagAliases = payload.aliases || {};
+        state.selectedTags.clear();
+        elements.mergedTagName.value = "";
+        elements.mergeCount.textContent = "已选 0 个标签";
+        elements.applyMergeBtn.disabled = true;
+        rebuildTagStats();
+        addLog(
+          `已合并 ${selected.length} 个标签为“${targetName}”，规则已写入 tag-overrides.json`,
+          "success"
+        );
+      } catch (error) {
+        addLog(`标签合并失败：${error.message}`, "error");
+      }
+    }
+
+    function download(content, filename, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function getExportTagRows() {
+      return buildTagRows().map((row) => ({
+        rank: row.rank,
+        tag: row.tag,
+        categories: row.categories.map((key) => getCategoryMeta(key).label),
+        partitions: row.partitions.map(([name, count]) => ({
+          name,
+          count,
+          percent: Number(((count / row.count) * 100).toFixed(2))
+        })),
+        count: row.count,
+        coverage: Number(row.coverage.toFixed(2))
+      }));
+    }
+
+    function exportCsv() {
+      const rows = getExportTagRows();
+      const csv = [
+        [
+          "rank",
+          "tag",
+          "categories",
+          "main_partitions",
+          "video_count",
+          "coverage_percent"
+        ],
+        ...rows.map((row) => [
+          row.rank,
+          row.tag,
+          row.categories.join("|"),
+          row.partitions
+            .slice(0, 3)
+            .map((item) => `${item.name}:${item.percent}%`)
+            .join("|"),
+          row.count,
+          row.coverage
+        ])
+      ].map((row) =>
+        row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(",")
+      ).join("\r\n");
+      download(`\uFEFF${csv}`, `bilibili-tags-${Date.now()}.csv`, "text/csv;charset=utf-8");
+      addLog("已导出 CSV 标签统计");
+    }
+
+    function exportJson() {
+      const tags = getExportTagRows();
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        folder: state.folder,
+        taxonomyVersion: window.TAG_TAXONOMY?.version || "",
+        tagAliases: state.tagAliases,
+        summary: {
+          total: state.total,
+          success: state.success,
+          empty: state.empty,
+          failed: state.failed,
+          uniqueTags: state.tagCounts.size
+        },
+        tags,
+        videos: state.videoRows
+      };
+      download(
+        JSON.stringify(payload, null, 2),
+        `bilibili-tags-${Date.now()}.json`,
+        "application/json;charset=utf-8"
+      );
+      addLog("已导出 JSON 标签统计");
+    }
+
+    elements.startBtn.addEventListener("click", startScan);
+    elements.stopBtn.addEventListener("click", () => {
+      state.controller?.abort();
+    });
+    elements.clearCacheBtn.addEventListener("click", clearCache);
+    let cacheStatusTimer = null;
+    elements.mediaId.addEventListener("input", () => {
+      clearTimeout(cacheStatusTimer);
+      cacheStatusTimer = setTimeout(() => {
+        restoreFilterState();
+        refreshCacheStatus();
+        renderTags();
+      }, 350);
+    });
+    elements.tagToolbar.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-category]");
+      if (!button) return;
+      const key = button.dataset.category;
+      if (key === "all") {
+        state.includedCategories.clear();
+        state.excludedCategories.clear();
+        state.page = 1;
+        saveFilterState();
+        renderTags();
+        return;
+      }
+
+      if (state.includedCategories.has(key)) {
+        state.includedCategories.delete(key);
+        state.excludedCategories.add(key);
+      } else if (state.excludedCategories.has(key)) {
+        state.excludedCategories.delete(key);
+      } else {
+        state.includedCategories.add(key);
+      }
+      state.page = 1;
+      saveFilterState();
+      renderTags();
+    });
+    elements.resetFilterBtn.addEventListener("click", () => {
+      state.includedCategories.clear();
+      state.excludedCategories.clear();
+      state.page = 1;
+      saveFilterState();
+      renderTags();
+    });
+    elements.tagPagination.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-page]");
+      if (!button || button.disabled) return;
+      state.page = Number(button.dataset.page) || 1;
+      renderTags();
+      elements.tagTableWrap.scrollTop = 0;
+    });
+    elements.mergeToggleBtn.addEventListener("click", () => {
+      setMergeMode(!state.mergeMode);
+      renderTags();
+    });
+    elements.cancelMergeBtn.addEventListener("click", () => {
+      setMergeMode(false);
+      renderTags();
+    });
+    elements.mergedTagName.addEventListener("input", () => {
+      elements.applyMergeBtn.disabled = state.selectedTags.size === 0;
+    });
+    elements.applyMergeBtn.addEventListener("click", applyTagMerge);
+    elements.tagTableWrap.addEventListener("change", (event) => {
+      const checkbox = event.target.closest("[data-merge-tag]");
+      if (!checkbox) return;
+      const tag = checkbox.dataset.mergeTag;
+      if (checkbox.checked) state.selectedTags.add(tag);
+      else state.selectedTags.delete(tag);
+      elements.mergeCount.textContent =
+        `已选 ${state.selectedTags.size} 个标签`;
+      elements.applyMergeBtn.disabled = state.selectedTags.size === 0;
+      if (state.selectedTags.size === 1 && !elements.mergedTagName.value) {
+        elements.mergedTagName.value = [...state.selectedTags][0];
+      }
+    });
+    elements.exportCsvBtn.addEventListener("click", exportCsv);
+    elements.exportJsonBtn.addEventListener("click", exportJson);
+    restoreFilterState();
+    loadTagOverrides();
+    refreshCacheStatus();
+  </script>
+</body>
+</html>
