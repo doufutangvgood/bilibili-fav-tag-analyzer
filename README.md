@@ -4,6 +4,8 @@
 
 使用前请阅读 [免责声明](DISCLAIMER.md)。
 
+参与者与 AI 协作说明见 [Contributors](CONTRIBUTORS.md)。
+
 ## 使用方法
 
 1. 安装 Node.js 22.5 或更高版本。本工具使用 Node.js 内置 SQLite，不需要安装第三方依赖。
