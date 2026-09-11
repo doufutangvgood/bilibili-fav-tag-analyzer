@@ -9,7 +9,9 @@
 ## 使用方法
 
 1. 安装 Node.js 22.5 或更高版本。本工具使用 Node.js 内置 SQLite，不需要安装第三方依赖。
-2. 双击 `start.ps1`，或在 PowerShell 中运行：
+2. 双击 `start.bat`。Windows 默认不会直接执行 `.ps1` 文件，因此推荐使用批处理启动器。
+
+   也可以在 PowerShell 中运行：
 
    ```powershell
    .\start.ps1
