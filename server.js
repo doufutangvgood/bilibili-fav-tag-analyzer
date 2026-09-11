@@ -181,6 +181,21 @@ function sendNdjson(res, payload) {
   res.write(`${JSON.stringify(payload)}\n`);
 }
 
+function describeError(error) {
+  const parts = [error?.message || "未知错误"];
+  const cause = error?.cause;
+  if (cause) {
+    const details = [
+      cause.code,
+      cause.message,
+      cause.hostname ? `host=${cause.hostname}` : "",
+      cause.port ? `port=${cause.port}` : ""
+    ].filter(Boolean);
+    if (details.length) parts.push(`(${details.join(", ")})`);
+  }
+  return parts.join(" ");
+}
+
 function readJsonBody(req, maxBytes = 1024 * 1024) {
   return new Promise((resolve, reject) => {
     let size = 0;
@@ -741,7 +756,7 @@ async function handleScan(req, res, url) {
             type: "videoError",
             index: cachedVideos.length + index + 1,
             video,
-            error: error.message || "获取失败"
+            error: describeError(error)
           });
         }
         await sleep(interval, controller.signal);
@@ -767,9 +782,10 @@ async function handleScan(req, res, url) {
     if (error.message !== "ABORTED" && !res.writableEnded) {
       sendNdjson(res, {
         type: "fatal",
-        error: error.message || "扫描失败"
+        error: describeError(error)
       });
       res.end();
+      console.error("Scan failed:", describeError(error), error.cause || "");
     }
   }
 }
